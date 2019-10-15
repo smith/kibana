@@ -7,7 +7,7 @@
 import React from 'react';
 import { isEmpty } from 'lodash';
 import { Hint } from 'react-vis';
-import moment from 'moment';
+import moment from 'moment-timezone';
 import styled from 'styled-components';
 import PropTypes from 'prop-types';
 import {
@@ -69,6 +69,16 @@ const Value = styled.div`
   font-size: ${fontSize};
 `;
 
+/**
+ * Format the time for the tooltip header.
+ *
+ * Since the x-axis is always using local time, we display the date in local time
+ * instead of the users preferred timezone.
+ */
+function headerTime(date) {
+  return moment.tz(date, moment.tz.guess()).format('MMMM Do YYYY, HH:mm:ss');
+}
+
 export default function Tooltip({
   header,
   footer,
@@ -87,8 +97,7 @@ export default function Tooltip({
   return (
     <Hint {...props} value={{ x, y }}>
       <TooltipElm>
-        <Header>{header || moment(x).format('MMMM Do YYYY, HH:mm:ss')}</Header>
-
+        <Header>{header || headerTime(x)}</Header>
         <Content>
           {showLegends ? (
             tooltipPoints.map((point, i) => (
