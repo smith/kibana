@@ -21,6 +21,7 @@ import { HomePublicPluginSetup } from '../../../../../../src/plugins/home/public
 import { KibanaContextProvider } from '../../../../../../src/plugins/kibana_react/public';
 import { PluginSetupContract as AlertingPluginPublicSetup } from '../../../../../plugins/alerting/public';
 import { AlertType } from '../../../../../plugins/apm/common/alert_types';
+import { CloudSetup } from '../../../../../plugins/cloud/public';
 import { LicensingPluginSetup } from '../../../../../plugins/licensing/public';
 import {
   AlertsContextProvider,
@@ -77,6 +78,7 @@ export type ApmPluginStart = void;
 
 export interface ApmPluginSetupDeps {
   alerting?: AlertingPluginPublicSetup;
+  cloud?: CloudSetup;
   data: DataPublicPluginSetup;
   home: HomePublicPluginSetup;
   licensing: LicensingPluginSetup;

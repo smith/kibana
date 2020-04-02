@@ -8,6 +8,7 @@ import { EuiButton, EuiEmptyPrompt, EuiPanel } from '@elastic/eui';
 import React from 'react';
 import { i18n } from '@kbn/i18n';
 import { useKibanaUrl } from '../../../hooks/useKibanaUrl';
+import { useApmPluginContext } from '../../../hooks/useApmPluginContext';
 
 interface Props {
   text: string;
@@ -19,6 +20,10 @@ export const LicensePrompt = ({ text, showBetaBadge = false }: Props) => {
     '/app/kibana',
     '/management/elasticsearch/license_management/home'
   );
+  const { plugins } = useApmPluginContext();
+  const href = plugins.cloud?.isCloudEnabled
+    ? 'https://cloud.elastic.co/account/billing'
+    : licensePageUrl;
 
   const renderLicenseBody = (
     <EuiEmptyPrompt
@@ -33,7 +38,11 @@ export const LicensePrompt = ({ text, showBetaBadge = false }: Props) => {
       }
       body={<p>{text}</p>}
       actions={
-        <EuiButton fill={true} href={licensePageUrl}>
+        <EuiButton
+          data-test-subj="LicensePrompt EuiButton"
+          fill={true}
+          href={href}
+        >
           {i18n.translate('xpack.apm.license.button', {
             defaultMessage: 'Start trial'
           })}
