@@ -6,7 +6,9 @@
 
 import { findKibanaPlatformPlugins } from '@kbn/optimizer/target/optimizer/kibana_platform_plugins';
 import * as Path from 'path';
-import { snakeCase } from 'lodash';
+import { flatten, snakeCase } from 'lodash';
+import { readFileSync } from 'fs';
+
 /*
 
 Problem: Starting (for front and backend) and restarting (for backend) Kibana is slow.
@@ -29,6 +31,21 @@ So I could cat it to the end of my config/kibana.dev.yml.
 
 */
 
+function deps(id: string) {
+  const requiredPlugins = pluginMap[id].requiredPlugins ?? [];
+  const optionalPlugins = pluginMap[id].optionalPlugins ?? [];
+  return [
+    ...new Set(
+      flatten([
+        ...requiredPlugins,
+        ...optionalPlugins,
+        ...requiredPlugins.map(rid => deps(rid)),
+        ...optionalPlugins.map(oid => deps(oid))
+      ])
+    )
+  ];
+}
+
 const repoRoot = __dirname + '/../../../../..';
 const pluginScanDirs = [
   Path.resolve(repoRoot, 'src/plugins'),
@@ -37,49 +54,76 @@ const pluginScanDirs = [
   Path.resolve(repoRoot, 'src/legay/core_plugins'),
   Path.resolve(repoRoot, 'plugins')
 ];
-import { readFileSync } from 'fs';
+
 const pluginList = findKibanaPlatformPlugins(pluginScanDirs, []);
-const kibanaJsons = pluginList.map(plugin =>
-  JSON.parse(readFileSync(`${plugin.directory}/kibana.json`))
-);
+
+// These either fail when you try to do .enabled: false, or make kibana fail to
+// start. Exclude them.
+const exclude = [
+  'features',
+  'home',
+  'kibanaLegacy',
+  'licensing',
+  'mapsLegacy',
+  'regionMap',
+  'testbed',
+  'tileMap',
+  'usageCollection'
+];
+
+// These have an incorrect configPath so we alias it
+const aliases = {
+  'xpack.reporting': 'reporting'
+};
+
+const kibanaJsons = pluginList.map(plugin => {
+  const kibanaJson = JSON.parse(
+    readFileSync(`${plugin.directory}/kibana.json`)
+  );
+  const key = kibanaJson.configPath?.join('.');
+  const configKey = aliases[key] ?? key ?? snakeCase(plugin.id);
+  return {
+    ...plugin,
+    ...kibanaJson,
+    configKey
+  };
+});
+
 const pluginMap = kibanaJsons.reduce((acc, plugin) => {
   acc[plugin.id] = plugin;
   return acc;
 }, {});
 
-const exclude = [
-  'map',
-  'map.regionmap',
-  'map.tilemap',
+// console.log(pluginMap);
+// //process.exit(0);
 
-  // These do not have .enabled property you can set
-  'usageCollection',
-  'xpack.licensing',
-  'core.testbed',
-  'kibana_legacy',
-  'xpack.features',
-  'home'
-];
+const allDisabledPlugins = Object.values(pluginMap)
+  .filter(plugin => !exclude.includes(plugin.id))
+  .map(plugin => plugin.id);
 
-const aliases = {
-  'xpack.reporting': 'reporting'
-};
+// console.log(allDisabledPlugins);
+// process.exit(0);
 
-Object.values(pluginMap).forEach(plugin => {
-  // If I leave out everything that has a configpath, we can get it to start
-  // using the first set of excludes, but there's still some other things enabled
-  // that probably shouldn't be.
-  //
-  // If I disable everything, including the second two sets of excludes, it
-  // won't start because too many things are disabled.
-  //
-  // The correct solution would be to walk the tree so everything gets selected
-  // correctly.
-  const configPath =
-    aliases[plugin.configPath?.join('.')] ??
-    plugin.configPath?.join('.') ??
-    snakeCase(plugin.id);
-  if (!exclude.includes(configPath)) {
-    console.log(configPath + '.enabled: false');
-  }
-});
+//console.log(deps('apm'));
+const toEnable = ['apm', ...deps('apm')];
+
+// If I leave out everything that has a configpath, we can get it to start
+// using the first set of excludes, but there's still some other things enabled
+// that probably shouldn't be.
+//
+// If I disable everything, including the second two sets of excludes, it
+// won't start because too many things are disabled.
+//
+// The correct solution would be to walk the tree so everything gets selected
+// correctly.
+
+const disabledPlugins = allDisabledPlugins.filter(id => !toEnable.includes(id));
+
+disabledPlugins.forEach(id =>
+  console.log(`${pluginMap[id].configKey}.enabled: false`)
+);
+
+// TODO
+// Usage:
+//   --list: show the whole map
+//   --except pluginId: don't disable these and their deps. Use multiple times.
