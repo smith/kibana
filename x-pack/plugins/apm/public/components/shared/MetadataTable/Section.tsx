@@ -13,11 +13,12 @@ import { KeyValuePair } from '../../../utils/flattenObject';
 
 interface Props {
   keyValuePairs: KeyValuePair[];
+  scores: { [key: string]: number[] };
 }
 
-export function Section({ keyValuePairs }: Props) {
+export function Section({ keyValuePairs, scores }: Props) {
   if (!isEmpty(keyValuePairs)) {
-    return <KeyValueTable keyValuePairs={keyValuePairs} />;
+    return <KeyValueTable keyValuePairs={keyValuePairs} scores={scores} />;
   }
   return (
     <EuiText size="s">

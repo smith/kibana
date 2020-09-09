@@ -34,9 +34,11 @@ export function MetadataTable({ sections }: Props) {
   const location = useLocation();
   const { urlParams } = useUrlParams();
   const { searchTerm = '' } = urlParams;
-
   const filteredSections = filterSectionsByTerm(sections, searchTerm);
 
+  const scores: { [key: string]: number[] } = {
+    'http.request.method': [1, 2, 3],
+  };
   const onSearchChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value.trim().toLowerCase();
@@ -82,7 +84,7 @@ export function MetadataTable({ sections }: Props) {
               <h6>{section.label}</h6>
             </EuiTitle>
             <EuiSpacer size="s" />
-            <Section keyValuePairs={section.rows} />
+            <Section keyValuePairs={section.rows} scores={scores} />
             <EuiSpacer size="xl" />
           </div>
         ))}
