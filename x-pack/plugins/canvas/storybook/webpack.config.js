@@ -20,7 +20,7 @@ module.exports = async ({ config: storybookConfig }) => {
         // Include the React preset from Kibana for JS(X) and TS(X)
         {
           test: /\.(j|t)sx?$/,
-          exclude: /node_modules/,
+          exclude: /node_modules(?!\/@kbn)/,
           loaders: 'babel-loader',
           options: {
             presets: [require.resolve('@kbn/babel-preset/webpack_preset')],
