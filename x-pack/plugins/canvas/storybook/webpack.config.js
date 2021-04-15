@@ -6,6 +6,7 @@
  */
 
 const path = require('path');
+const shared = require('@kbn/ui-shared-deps');
 const webpack = require('webpack');
 const webpackMerge = require('webpack-merge');
 const { stringifyRequest } = require('loader-utils');
@@ -15,12 +16,13 @@ const { DLL_OUTPUT, KIBANA_ROOT } = require('./constants');
 // Extend the Storybook Webpack config with some customizations
 module.exports = async ({ config: storybookConfig }) => {
   const config = {
+    externals: shared.externals,
     module: {
       rules: [
         // Include the React preset from Kibana for JS(X) and TS(X)
         {
           test: /\.(j|t)sx?$/,
-          exclude: /node_modules(?!\/@kbn)/,
+          exclude: /node_modules/,
           loaders: 'babel-loader',
           options: {
             presets: [require.resolve('@kbn/babel-preset/webpack_preset')],

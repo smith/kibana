@@ -4,3 +4,12 @@
 -->
 <script src="dll.js"></script>
 <link href="dll.css" rel="stylesheet" />
+
+<!-- Added for Kibana shared dependencies -->
+<script>
+  window.__kbnPublicPath__ = { 'kbn-ui-shared-deps': '.' };
+</script>
+<script src="kbn-ui-shared-deps.@elastic.js"></script>
+<script src="kbn-ui-shared-deps.js"></script>
+<link href="kbn-ui-shared-deps.css" rel="stylesheet" />
+<link href="kbn-ui-shared-deps.v7.light.css" rel="stylesheet" />
