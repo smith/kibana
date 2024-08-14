@@ -8,6 +8,8 @@
 
 export * from './dataset_quality';
 export * from './logs_explorer';
+export { OBS_ENTITIES_EXPLORER_LOCATOR_ID } from './observability_entities_explorer';
+export type { EntitiesExplorerLocatorParams } from './observability_entities_explorer';
 export * from './observability_logs_explorer';
 export * from './observability_onboarding';
 export * from './uptime';

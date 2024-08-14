@@ -6,8 +6,13 @@
  * Side Public License, v 1.
  */
 
-import { EuiTab, EuiTabs, useEuiTheme } from '@elastic/eui';
-import { AllDatasetsLocatorParams, ALL_DATASETS_LOCATOR_ID } from '@kbn/deeplinks-observability';
+import { EuiBetaBadge, EuiTab, EuiTabs, useEuiTheme } from '@elastic/eui';
+import {
+  AllDatasetsLocatorParams,
+  ALL_DATASETS_LOCATOR_ID,
+  EntitiesExplorerLocatorParams,
+  OBS_ENTITIES_EXPLORER_LOCATOR_ID,
+} from '@kbn/deeplinks-observability';
 import { i18n } from '@kbn/i18n';
 import React, { MouseEvent } from 'react';
 import { DiscoverAppLocatorParams, DISCOVER_APP_LOCATOR } from '../../../common';
@@ -15,7 +20,7 @@ import type { DiscoverServices } from '../../build_services';
 
 export interface LogsExplorerTabsProps {
   services: Pick<DiscoverServices, 'share'>;
-  selectedTab: 'discover' | 'logs-explorer';
+  selectedTab: 'discover' | 'entities-explorer' | 'logs-explorer';
 }
 
 const emptyParams = {};
@@ -24,13 +29,23 @@ export const LogsExplorerTabs = ({ services, selectedTab }: LogsExplorerTabsProp
   const { euiTheme } = useEuiTheme();
   const locators = services.share?.url.locators;
   const discoverLocator = locators?.get<DiscoverAppLocatorParams>(DISCOVER_APP_LOCATOR);
+  const entitiesExplorerLocator = locators?.get<EntitiesExplorerLocatorParams>(
+    OBS_ENTITIES_EXPLORER_LOCATOR_ID
+  );
   const logsExplorerLocator = locators?.get<AllDatasetsLocatorParams>(ALL_DATASETS_LOCATOR_ID);
   const discoverUrl = discoverLocator?.getRedirectUrl(emptyParams);
+  const entitiesExplorerUrl = entitiesExplorerLocator?.getRedirectUrl(emptyParams);
   const logsExplorerUrl = logsExplorerLocator?.getRedirectUrl(emptyParams);
 
   const navigateToDiscover = createNavigateHandler(() => {
     if (selectedTab !== 'discover') {
       discoverLocator?.navigate(emptyParams);
+    }
+  });
+
+  const navigateToEntitiesExplorer = createNavigateHandler(() => {
+    if (selectedTab !== 'entities-explorer') {
+      entitiesExplorerLocator?.navigate(emptyParams);
     }
   });
 
@@ -52,6 +67,18 @@ export const LogsExplorerTabs = ({ services, selectedTab }: LogsExplorerTabsProp
         {i18n.translate('discover.logsExplorerTabs.discover', {
           defaultMessage: 'Discover',
         })}
+      </EuiTab>
+      <EuiTab
+        isSelected={selectedTab === 'entities-explorer'}
+        href={entitiesExplorerUrl}
+        onClick={navigateToEntitiesExplorer}
+        css={{ '.euiTab__content': { lineHeight: euiTheme.size.xxxl } }}
+        data-test-subj="entitiesExplorerTab"
+      >
+        {i18n.translate('discover.entitiesExplorerTabs.entitiesExplorer', {
+          defaultMessage: 'Entities Explorer',
+        })}
+        <EuiBetaBadge label="Lab" size="s" color="accent" iconType="beaker" />
       </EuiTab>
       <EuiTab
         isSelected={selectedTab === 'logs-explorer'}

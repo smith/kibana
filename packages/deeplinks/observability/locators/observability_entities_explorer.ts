@@ -6,15 +6,6 @@
  * Side Public License, v 1.
  */
 
-export {
-  LOGS_APP_ID,
-  OBSERVABILITY_ENTITIES_EXPLORER_APP_ID,
-  OBSERVABILITY_LOGS_EXPLORER_APP_ID,
-  OBSERVABILITY_ONBOARDING_APP_ID,
-  OBSERVABILITY_OVERVIEW_APP_ID,
-  AI_ASSISTANT_APP_ID,
-  OBLT_UX_APP_ID,
-  OBLT_PROFILING_APP_ID,
-} from './constants';
-export type { AppId, DeepLinkId } from './deep_links';
-export * from './locators';
+export const OBS_ENTITIES_EXPLORER_LOCATOR_ID = 'OBS_ENTITIES_EXPLORER_LOCATOR';
+
+export type EntitiesExplorerLocatorParams = any;
