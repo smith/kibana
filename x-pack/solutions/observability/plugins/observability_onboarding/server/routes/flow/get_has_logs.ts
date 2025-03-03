@@ -7,8 +7,8 @@
 
 import { ElasticsearchClient } from '@kbn/core/server';
 import { termQuery } from '@kbn/observability-plugin/server';
+import { ATTR_AGENT_ID } from '@kbn/observability-ui-semantic-conventions';
 import type { estypes } from '@elastic/elasticsearch';
-import { AGENT_ID } from '../../../common/es_fields';
 
 export async function getHasLogs(esClient: ElasticsearchClient, agentId: string) {
   try {
@@ -19,7 +19,7 @@ export async function getHasLogs(esClient: ElasticsearchClient, agentId: string)
       terminate_after: 1,
       query: {
         bool: {
-          filter: termQuery(AGENT_ID, agentId),
+          filter: termQuery(ATTR_AGENT_ID, agentId),
         },
       },
     });

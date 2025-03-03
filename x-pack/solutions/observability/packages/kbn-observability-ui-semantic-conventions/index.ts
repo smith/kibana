@@ -28,6 +28,15 @@ export {
 // ECS fields
 
 /**
+ * Unique identifier of this agent (if one exists).
+ *
+ * Example: For Beats this would be beat.id.
+ *
+ * @see https://www.elastic.co/guide/en/ecs/current/ecs-agent.html#field-agent-id
+ */
+export const ATTR_AGENT_ID = EcsFlat['agent.id'].name;
+
+/**
  * Custom name of the agent.
  *
  * This is a name that can be given to an agent. This can be helpful if for example two Filebeat instances are running on the same host but a human readable separation is needed on which Filebeat instance data is coming from.
