@@ -14,7 +14,10 @@ export type {
   ObservabilityAgentBuilderPluginStart,
   ObservabilityAgentBuilderPluginSetupDependencies,
   ObservabilityAgentBuilderPluginStartDependencies,
+  ObservabilityAgentBuilderCoreSetup,
 } from './types';
+
+export { createSigeventEventAttachmentType } from './attachments/sigevent_event';
 
 export type { ObservabilityAgentBuilderServerRouteRepository } from './routes/get_global_observability_agent_builder_route_repository';
 

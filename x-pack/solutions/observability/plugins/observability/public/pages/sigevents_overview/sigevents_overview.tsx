@@ -27,8 +27,10 @@ import {
   SigeventsOverview,
   SignificantEventDetailBody,
   SignificantEventDetailHeader,
+  SIGEVENTS_INDEX,
 } from '@kbn/sigevents';
 import type { HealthyMetricCardItem } from '@kbn/sigevents';
+import { OBSERVABILITY_SIGEVENT_EVENT_ATTACHMENT_TYPE_ID } from '@kbn/observability-agent-builder-plugin/public';
 import { usePluginContext } from '../../hooks/use_plugin_context';
 import { useKibana } from '../../utils/kibana_react';
 
@@ -141,33 +143,32 @@ export function SigeventsOverviewPage() {
     };
   }, [isDetailFlyoutOpen, closeDetailFlyout]);
 
+  const buildRemediationPrompt = useCallback((eventTitle: string) => {
+    return i18n.translate('xpack.observability.sigeventsOverview.remediationPrompt', {
+      defaultMessage:
+        'Help me remediate: {eventTitle}. Anchor on the significant event attachment, validate and extend it with live telemetry, then give an updated root cause narrative and prioritized remediation steps.',
+      values: { eventTitle },
+    });
+  }, []);
+
   const handleRemediate = useCallback(() => {
     const eventTitle = eventData?.mainEventTitle ?? 'the significant event';
-    setRemediationPrompt(
-      i18n.translate('xpack.observability.sigeventsOverview.remediationPrompt', {
-        defaultMessage:
-          'Help me remediate: {eventTitle}. What are the possible root causes and recommended next steps?',
-        values: { eventTitle },
-      })
-    );
+    setRemediationPrompt(buildRemediationPrompt(eventTitle));
     setConversationKey((prev) => prev + 1);
-  }, [eventData?.mainEventTitle]);
+  }, [eventData?.mainEventTitle, buildRemediationPrompt]);
 
   const handleFlyoutRemediate = useCallback(() => {
     handleRemediate();
     closeDetailFlyout();
   }, [handleRemediate, closeDetailFlyout]);
 
-  const handleRemediateEvent = useCallback((eventTitle: string) => {
-    setRemediationPrompt(
-      i18n.translate('xpack.observability.sigeventsOverview.remediationPrompt', {
-        defaultMessage:
-          'Help me remediate: {eventTitle}. What are the possible root causes and recommended next steps?',
-        values: { eventTitle },
-      })
-    );
-    setConversationKey((prev) => prev + 1);
-  }, []);
+  const handleRemediateEvent = useCallback(
+    (eventTitle: string) => {
+      setRemediationPrompt(buildRemediationPrompt(eventTitle));
+      setConversationKey((prev) => prev + 1);
+    },
+    [buildRemediationPrompt]
+  );
 
   const EmbeddableConversation = useMemo(
     () => agentBuilder?.getEmbeddableConversation(),
@@ -423,6 +424,19 @@ export function SigeventsOverviewPage() {
                   autoSendInitialMessage={!!remediationPrompt}
                   autoFocus={false}
                   newConversation={conversationKey > 0}
+                  attachments={[
+                    {
+                      type: OBSERVABILITY_SIGEVENT_EVENT_ATTACHMENT_TYPE_ID,
+                      data: {
+                        index: SIGEVENTS_INDEX,
+                        eventId: eventData?.raw.event_id,
+                        attachmentLabel: i18n.translate(
+                          'xpack.observability.sigeventsOverviewPage.attachmentLabel',
+                          { defaultMessage: 'Sigevent event' }
+                        ),
+                      },
+                    },
+                  ]}
                 />
               </EuiFlexItem>
             )}
