@@ -12,33 +12,33 @@ import type { AttachmentTypeDefinition } from '@kbn/agent-builder-server/attachm
 import { ToolType } from '@kbn/agent-builder-common';
 import { ToolResultType } from '@kbn/agent-builder-common/tools/tool_result';
 import type { ObservabilityAgentBuilderCoreSetup } from '../types';
-import { OBSERVABILITY_SIGEVENT_EVENT_ATTACHMENT_TYPE_ID } from '../../common';
+import { OBSERVABILITY_SIGNIFICANT_EVENT_ATTACHMENT_TYPE_ID } from '../../common';
 import { getSignificantEventByEventId } from '../utils/get_significant_event_by_event_id';
 import { observabilityAttachmentDataSchema } from './observability_attachment_data_schema';
 
-const GET_SIGEVENT_EVENT_TOOL_ID = 'get_sigevent_event';
+const GET_SIGNIFICANT_EVENT_TOOL_ID = 'get_significant_event';
 
-const sigeventEventDataSchema = observabilityAttachmentDataSchema.extend({
+const significantEventDataSchema = observabilityAttachmentDataSchema.extend({
   eventId: z.string(),
   index: z.string(),
 });
 
-export type SigeventEventAttachmentData = z.infer<typeof sigeventEventDataSchema>;
+export type SignificantEventAttachmentData = z.infer<typeof significantEventDataSchema>;
 
-export function createSigeventEventAttachmentType({
+export function createSignificantEventAttachmentType({
   core,
   logger,
 }: {
   core: ObservabilityAgentBuilderCoreSetup;
   logger: Logger;
 }): AttachmentTypeDefinition<
-  typeof OBSERVABILITY_SIGEVENT_EVENT_ATTACHMENT_TYPE_ID,
-  SigeventEventAttachmentData
+  typeof OBSERVABILITY_SIGNIFICANT_EVENT_ATTACHMENT_TYPE_ID,
+  SignificantEventAttachmentData
 > {
   return {
-    id: OBSERVABILITY_SIGEVENT_EVENT_ATTACHMENT_TYPE_ID,
+    id: OBSERVABILITY_SIGNIFICANT_EVENT_ATTACHMENT_TYPE_ID,
     validate: (input) => {
-      const parsed = sigeventEventDataSchema.safeParse(input);
+      const parsed = significantEventDataSchema.safeParse(input);
       if (parsed.success) {
         return { valid: true, data: parsed.data };
       }
@@ -50,11 +50,11 @@ export function createSigeventEventAttachmentType({
       return {
         getRepresentation: () => ({
           type: 'text',
-          value: `Observability significant event ID: ${eventId} (index: ${index}). Use the ${GET_SIGEVENT_EVENT_TOOL_ID} tool to fetch the full event payload.`,
+          value: `Observability significant event ID: ${eventId} (index: ${index}). Use the ${GET_SIGNIFICANT_EVENT_TOOL_ID} tool to fetch the full event payload.`,
         }),
         getBoundedTools: () => [
           {
-            id: GET_SIGEVENT_EVENT_TOOL_ID,
+            id: GET_SIGNIFICANT_EVENT_TOOL_ID,
             type: ToolType.builtin,
             description: `Fetch the significant event document for event_id ${eventId} from index ${index}.`,
             schema: z.object({}),
@@ -115,7 +115,7 @@ export function createSigeventEventAttachmentType({
     getTools: () => [],
     getAgentDescription: () =>
       dedent(
-        `An Observability significant event attachment. The event_id (and optional Elasticsearch index) are provided — use the ${GET_SIGEVENT_EVENT_TOOL_ID} tool to load the mapped event payload (same structure as the significant events UI).`
+        `An Observability significant event attachment. The event_id (and optional Elasticsearch index) are provided — use the ${GET_SIGNIFICANT_EVENT_TOOL_ID} tool to load the mapped event payload (same structure as the significant events UI).`
       ),
   };
 }

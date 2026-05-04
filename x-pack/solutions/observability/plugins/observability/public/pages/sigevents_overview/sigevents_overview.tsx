@@ -29,8 +29,9 @@ import {
   SignificantEventDetailHeader,
   SIGEVENTS_INDEX,
 } from '@kbn/sigevents';
+import type { EmbeddableConversationProps } from '@kbn/agent-builder-plugin/public';
 import type { HealthyMetricCardItem } from '@kbn/sigevents';
-import { OBSERVABILITY_SIGEVENT_EVENT_ATTACHMENT_TYPE_ID } from '@kbn/observability-agent-builder-plugin/public';
+import { OBSERVABILITY_SIGNIFICANT_EVENT_ATTACHMENT_TYPE_ID } from '@kbn/observability-agent-builder-plugin/public';
 import { usePluginContext } from '../../hooks/use_plugin_context';
 import { useKibana } from '../../utils/kibana_react';
 
@@ -99,6 +100,7 @@ export function SigeventsOverviewPage() {
   const [isDetailFlyoutOpen, setIsDetailFlyoutOpen] = useState(false);
   const [remediationPrompt, setRemediationPrompt] = useState<string | undefined>(undefined);
   const [conversationKey, setConversationKey] = useState(0);
+  const [attachments, setAttachments] = useState<EmbeddableConversationProps['attachments']>([]);
   const flyoutHeadingId = useGeneratedHtmlId({ prefix: 'sigeventsDetailFlyout' });
   const returnFocusRef = useRef<Element | null>(null);
 
@@ -142,6 +144,20 @@ export function SigeventsOverviewPage() {
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isDetailFlyoutOpen, closeDetailFlyout]);
+
+  useEffect(() => {
+    if (eventData?.raw.event_id) {
+      setAttachments([
+        {
+          type: OBSERVABILITY_SIGNIFICANT_EVENT_ATTACHMENT_TYPE_ID,
+          data: {
+            index: SIGEVENTS_INDEX,
+            eventId: eventData?.raw.event_id,
+          },
+        },
+      ]);
+    }
+  }, [eventData?.raw.event_id]);
 
   const buildRemediationPrompt = useCallback((eventTitle: string) => {
     return i18n.translate('xpack.observability.sigeventsOverview.remediationPrompt', {
@@ -424,19 +440,7 @@ export function SigeventsOverviewPage() {
                   autoSendInitialMessage={!!remediationPrompt}
                   autoFocus={false}
                   newConversation={conversationKey > 0}
-                  attachments={[
-                    {
-                      type: OBSERVABILITY_SIGEVENT_EVENT_ATTACHMENT_TYPE_ID,
-                      data: {
-                        index: SIGEVENTS_INDEX,
-                        eventId: eventData?.raw.event_id,
-                        attachmentLabel: i18n.translate(
-                          'xpack.observability.sigeventsOverviewPage.attachmentLabel',
-                          { defaultMessage: 'Sigevent event' }
-                        ),
-                      },
-                    },
-                  ]}
+                  attachments={attachments}
                 />
               </EuiFlexItem>
             )}

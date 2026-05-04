@@ -18,7 +18,6 @@ import {
   OBSERVABILITY_SLO_ATTACHMENT_TYPE_ID,
   OBSERVABILITY_TRANSACTION_ATTACHMENT_TYPE_ID,
   OBSERVABILITY_MONITOR_ATTACHMENT_TYPE_ID,
-  OBSERVABILITY_SIGEVENT_EVENT_ATTACHMENT_TYPE_ID,
 } from '../../common/constants';
 
 type UnknownAttachmentWithLabel = Attachment<
@@ -95,13 +94,6 @@ const ATTACHMENT_TYPE_CONFIGS: AttachmentTypeConfig[] = [
       defaultMessage: 'Monitor',
     }),
     icon: 'online',
-  },
-  {
-    type: OBSERVABILITY_SIGEVENT_EVENT_ATTACHMENT_TYPE_ID,
-    label: i18n.translate('xpack.observabilityAgentBuilder.attachments.sigeventEvent.label', {
-      defaultMessage: 'Significant event',
-    }),
-    icon: 'pattern',
   },
 ];
 

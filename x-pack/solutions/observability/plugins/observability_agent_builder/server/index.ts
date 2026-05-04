@@ -17,7 +17,7 @@ export type {
   ObservabilityAgentBuilderCoreSetup,
 } from './types';
 
-export { createSigeventEventAttachmentType } from './attachments/sigevent_event';
+export { createSignificantEventAttachmentType } from './attachments/significant_event';
 
 export type { ObservabilityAgentBuilderServerRouteRepository } from './routes/get_global_observability_agent_builder_route_repository';
 

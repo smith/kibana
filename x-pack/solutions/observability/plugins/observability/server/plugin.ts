@@ -35,7 +35,7 @@ import type { PluginSetup as ESQLSetup } from '@kbn/esql/server';
 import type { AttachmentTypeDefinition } from '@kbn/agent-builder-server/attachments';
 import type { AgentBuilderPluginSetup } from '@kbn/agent-builder-plugin/server/types';
 import {
-  createSigeventEventAttachmentType,
+  createSignificantEventAttachmentType,
   type ObservabilityAgentBuilderCoreSetup,
 } from '@kbn/observability-agent-builder-plugin/server';
 import { getLogsFeature } from './features/logs_feature';
@@ -128,9 +128,9 @@ export class ObservabilityPlugin
     });
 
     plugins.agentBuilder.attachments.registerType(
-      createSigeventEventAttachmentType({
+      createSignificantEventAttachmentType({
         core: core as unknown as ObservabilityAgentBuilderCoreSetup,
-        logger: this.logger.get('sigeventEventAttachment'),
+        logger: this.logger,
       }) as AttachmentTypeDefinition
     );
 
