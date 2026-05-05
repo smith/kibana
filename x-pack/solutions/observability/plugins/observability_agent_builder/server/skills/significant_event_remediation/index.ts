@@ -13,6 +13,7 @@ import { OBSERVABILITY_RUN_LOG_RATE_ANALYSIS_TOOL_ID } from '../../tools/run_log
 import { OBSERVABILITY_GET_SERVICES_TOOL_ID } from '../../tools/get_services/tool';
 import { OBSERVABILITY_GET_SERVICE_TOPOLOGY_TOOL_ID } from '../../tools/get_service_topology/tool';
 import { OBSERVABILITY_GET_TRACES_TOOL_ID } from '../../tools/get_traces/tool';
+import { OBSERVABILITY_REMEDIATION_WORKFLOW_TOOL_ID } from '../../tools/remediation_workflows/constants';
 import significantEventRemediationSkillDescription from './description.text';
 import significantEventRemediationSkillContent from './skill.md.text';
 
@@ -26,6 +27,7 @@ const SIGNIFICANT_EVENT_REMEDIATION_TOOL_IDS = [
   OBSERVABILITY_GET_SERVICES_TOOL_ID,
   OBSERVABILITY_GET_SERVICE_TOPOLOGY_TOOL_ID,
   OBSERVABILITY_GET_TRACES_TOOL_ID,
+  OBSERVABILITY_REMEDIATION_WORKFLOW_TOOL_ID,
 ];
 
 export const createSignificantEventRemediationSkill = () =>
