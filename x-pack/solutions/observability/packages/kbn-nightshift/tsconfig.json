@@ -14,11 +14,11 @@
     "@kbn/shared-ux-ai-components",
     "@kbn/react-query",
     "@kbn/data-plugin",
-    "@kbn/test-jest-helpers",
     "@kbn/lens-embeddable-utils",
     "@kbn/lens-plugin",
     "@kbn/data-views-plugin",
     "@kbn/ui-actions-plugin",
-    "@kbn/es-query"
+    "@kbn/es-query",
+    "@kbn/es-types"
   ]
 }
