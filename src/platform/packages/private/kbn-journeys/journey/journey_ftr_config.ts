@@ -74,11 +74,13 @@ export function makeFtrConfigProvider(
       ...JOURNEY_APM_CONFIG.globalLabels,
     };
 
-    Object.entries(allApmLabels).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        apm.setGlobalLabel(key, value);
-      }
-    });
+    if (apm.isStarted()) {
+      Object.entries(allApmLabels).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          apm.setGlobalLabel(key, value);
+        }
+      });
+    }
 
     const allApmLabelsStringified = Object.entries(allApmLabels)
       .flatMap(([key, value]) => (value === null || value === undefined ? [] : `${key}=${value}`))

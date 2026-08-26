@@ -202,9 +202,11 @@ export class TelemetryPlugin implements Plugin<TelemetryPluginSetup, TelemetryPl
       name: 'telemetry labels',
       context$: this.config$.pipe(
         map(({ labels }) => ({ labels })),
-        tap(({ labels }) =>
-          Object.entries(labels).forEach(([key, value]) => apm.setGlobalLabel(key, value))
-        )
+        tap(({ labels }) => {
+          if (apm.isStarted()) {
+            Object.entries(labels).forEach(([key, value]) => apm.setGlobalLabel(key, value));
+          }
+        })
       ),
       schema: {
         labels: {
