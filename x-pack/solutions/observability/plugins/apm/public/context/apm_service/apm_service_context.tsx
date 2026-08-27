@@ -17,6 +17,7 @@ import { useAnyOfApmParams } from '../../hooks/use_apm_params';
 import { useTimeRange } from '../../hooks/use_time_range';
 import { useFallbackToTransactionsFetcher } from '../../hooks/use_fallback_to_transactions_fetcher';
 import { replace } from '../../components/shared/links/url_helpers';
+import { TRANSACTION_TYPE_NONE } from '../../components/shared/transaction_type_select';
 import { FETCH_STATUS } from '../../hooks/use_fetcher';
 import type { ServerlessType } from '../../../common/serverless';
 import { usePreferredDataSourceAndBucketSize } from '../../hooks/use_preferred_data_source_and_bucket_size';
@@ -30,6 +31,7 @@ export interface APMServiceContextValue {
   transactionType?: string;
   transactionTypeStatus: FETCH_STATUS;
   transactionTypes: string[];
+  hasUntypedTransactions: boolean;
   runtimeName?: string;
   runtimeVersion?: string;
   fallbackToTransactions: boolean;
@@ -40,6 +42,7 @@ export const APMServiceContext = createContext<APMServiceContextValue>({
   serviceName: '',
   transactionTypeStatus: FETCH_STATUS.NOT_INITIATED,
   transactionTypes: [],
+  hasUntypedTransactions: false,
   fallbackToTransactions: false,
   serviceAgentStatus: FETCH_STATUS.NOT_INITIATED,
 });
@@ -77,7 +80,11 @@ export function ApmServiceContextProvider({ children }: { children: ReactNode })
     numBuckets: 100,
   });
 
-  const { transactionTypes, status: transactionTypeStatus } = useServiceTransactionTypesFetcher({
+  const {
+    transactionTypes,
+    hasUntypedTransactions,
+    status: transactionTypeStatus,
+  } = useServiceTransactionTypesFetcher({
     serviceName,
     start,
     end,
@@ -107,6 +114,7 @@ export function ApmServiceContextProvider({ children }: { children: ReactNode })
         transactionType: currentTransactionType,
         transactionTypeStatus,
         transactionTypes,
+        hasUntypedTransactions,
         runtimeName,
         runtimeVersion,
         fallbackToTransactions,
@@ -177,6 +185,9 @@ export function getOrRedirectToTransactionType({
   agentName?: string;
   history: History;
 }) {
+  // User explicitly chose "no type filter" — honour it without redirecting.
+  if (transactionType === TRANSACTION_TYPE_NONE) return undefined;
+
   const isTransactionTypeExists = isTypeExistsInTransactionTypesList({
     transactionType,
     transactionTypes,

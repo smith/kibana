@@ -161,4 +161,16 @@ describe('Agents guards', () => {
   it('getAgentName returns telemetry agent name if agent name and telemetry sdk are not defined', () => {
     expect(getAgentName(null, 'go', null)).toBe('go');
   });
+
+  it('getAgentName normalizes go.opentelemetry.io SDK name to opentelemetry', () => {
+    expect(getAgentName(null, 'go', 'go.opentelemetry.io/otel/sdk/trace')).toBe('opentelemetry/go');
+  });
+
+  it('getAgentName normalizes opentelemetry-sdk to opentelemetry', () => {
+    expect(getAgentName(null, 'python', 'opentelemetry-sdk')).toBe('opentelemetry/python');
+  });
+
+  it('getAgentName normalizes @opentelemetry/sdk-node to opentelemetry', () => {
+    expect(getAgentName(null, 'nodejs', '@opentelemetry/sdk-node')).toBe('opentelemetry/nodejs');
+  });
 });

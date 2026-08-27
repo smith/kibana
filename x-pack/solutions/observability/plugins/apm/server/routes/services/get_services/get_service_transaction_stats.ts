@@ -14,6 +14,7 @@ import {
   getDurationFieldForTransactions,
 } from '@kbn/apm-data-access-plugin/server/utils';
 import type { ApmDocumentType } from '../../../../common/document_type';
+import { DEPLOYMENT_ENVIRONMENT, DEPLOYMENT_ENVIRONMENT_NAME, DURATION } from '@kbn/apm-types/es_fields';
 import {
   AGENT_NAME,
   SERVICE_ENVIRONMENT,
@@ -79,6 +80,10 @@ export async function getServiceTransactionStats({
   useDurationSummary,
   searchQuery,
 }: AggregationParams): Promise<ServiceTransactionStatsResponse> {
+  // Synthetic bucket key used by the terms `missing` option to capture OTel
+  // root spans that have no transaction.type field.
+  const OTEL_NO_TX_TYPE = '__otel__';
+
   const outcomes = getOutcomeAggregation(documentType);
 
   const metrics = {
@@ -87,72 +92,58 @@ export async function getServiceTransactionStats({
         field: getDurationFieldForTransactions(documentType, useDurationSummary),
       },
     },
+    // OTel spans store duration in nanoseconds in `duration`. Absent for APM docs.
+    avg_otel_duration: { avg: { field: DURATION } },
     ...outcomes,
   };
 
-  const response = await apmEventClient.search('get_service_transaction_stats', {
-    apm: {
-      sources: [
-        {
-          documentType,
-          rollupInterval,
-        },
-      ],
-    },
-    track_total_hits: false,
-    size: 0,
-    query: {
-      bool: {
-        filter: [
-          ...rangeQuery(start, end),
-          ...environmentQuery(environment),
-          ...kqlQuery(kuery),
-          ...serviceGroupWithOverflowQuery(serviceGroup),
-          ...wildcardQuery(SERVICE_NAME, searchQuery),
-        ],
+  const response = await apmEventClient.search(
+    'get_service_transaction_stats',
+    {
+      apm: {
+        sources: [{ documentType, rollupInterval }],
       },
-    },
-    aggs: {
-      sample: {
-        random_sampler: randomSampler,
-        aggs: {
-          overflowCount: {
-            sum: {
-              field: SERVICE_OVERFLOW_COUNT,
+      track_total_hits: false,
+      size: 0,
+      query: {
+        bool: {
+          filter: [
+            ...rangeQuery(start, end),
+            ...environmentQuery(environment),
+            ...kqlQuery(kuery),
+            ...serviceGroupWithOverflowQuery(serviceGroup),
+            ...wildcardQuery(SERVICE_NAME, searchQuery),
+          ],
+        },
+      },
+      aggs: {
+        sample: {
+          random_sampler: randomSampler,
+          aggs: {
+            overflowCount: {
+              sum: { field: SERVICE_OVERFLOW_COUNT },
             },
-          },
-          services: {
-            terms: {
-              field: SERVICE_NAME,
-              size: maxNumServices,
-            },
-            aggs: {
-              telemetryAgentName: {
-                terms: {
-                  field: TELEMETRY_SDK_LANGUAGE,
-                },
-              },
-              telemetrySdkName: {
-                terms: {
-                  field: TELEMETRY_SDK_NAME,
-                },
-              },
-              transactionType: {
-                terms: {
-                  field: TRANSACTION_TYPE,
-                },
-                aggs: {
-                  ...metrics,
-                  environments: {
-                    terms: {
-                      field: SERVICE_ENVIRONMENT,
-                    },
+            services: {
+              terms: { field: SERVICE_NAME, size: maxNumServices },
+              aggs: {
+                telemetryAgentName: { terms: { field: TELEMETRY_SDK_LANGUAGE } },
+                telemetrySdkName: { terms: { field: TELEMETRY_SDK_NAME } },
+                transactionType: {
+                  terms: {
+                    field: TRANSACTION_TYPE,
+                    // Docs with no transaction.type (unprocessed OTel spans) land
+                    // in this synthetic bucket so their metrics are still computed.
+                    missing: OTEL_NO_TX_TYPE,
                   },
-                  sample: {
-                    top_metrics: {
-                      metrics: [{ field: AGENT_NAME } as const],
-                      sort: {
-                        '@timestamp': 'desc' as const,
+                  aggs: {
+                    ...metrics,
+                    environments: { terms: { field: SERVICE_ENVIRONMENT } },
+                    otel_environments: { terms: { field: DEPLOYMENT_ENVIRONMENT_NAME } },
+                    otel_environments_legacy: { terms: { field: DEPLOYMENT_ENVIRONMENT } },
+                    sample: {
+                      top_metrics: {
+                        metrics: [{ field: AGENT_NAME } as const],
+                        sort: { '@timestamp': 'desc' as const },
                       },
                     },
                   },
@@ -162,8 +153,8 @@ export async function getServiceTransactionStats({
           },
         },
       },
-    },
-  });
+    }
+  );
 
   const maxCountExceeded = (response.aggregations?.sample.services.sum_other_doc_count ?? 0) > 0;
 
@@ -176,19 +167,34 @@ export async function getServiceTransactionStats({
           ) ?? bucket.transactionType.buckets[0]
         );
 
+        const txKey = topTransactionTypeBucket?.key as string | undefined;
+        // Don't surface the synthetic OTel sentinel as a real transaction type
+        const transactionType = txKey === OTEL_NO_TX_TYPE ? undefined : txKey;
+
+        // OTel spans store duration in nanoseconds; convert to microseconds as fallback
+        const otelDurationUs =
+          topTransactionTypeBucket?.avg_otel_duration?.value != null
+            ? topTransactionTypeBucket.avg_otel_duration.value / 1000
+            : null;
+
         return {
           serviceName: bucket.key as string,
-          transactionType: topTransactionTypeBucket?.key as string | undefined,
-          environments:
-            topTransactionTypeBucket?.environments.buckets.map(
-              (environmentBucket) => environmentBucket.key as string
-            ) ?? [],
+          transactionType,
+          environments: [
+            ...(topTransactionTypeBucket?.environments.buckets.map((b) => b.key as string) ?? []),
+            ...(topTransactionTypeBucket?.otel_environments?.buckets.map(
+              (b) => b.key as string
+            ) ?? []),
+            ...(topTransactionTypeBucket?.otel_environments_legacy?.buckets.map(
+              (b) => b.key as string
+            ) ?? []),
+          ],
           agentName: getAgentName(
             topTransactionTypeBucket?.sample.top[0].metrics[AGENT_NAME] as string | null,
             bucket.telemetryAgentName.buckets[0]?.key as string | null,
             bucket.telemetrySdkName.buckets[0]?.key as string | null
           ) as AgentName,
-          latency: topTransactionTypeBucket?.avg_duration.value,
+          latency: topTransactionTypeBucket?.avg_duration.value ?? otelDurationUs,
           transactionErrorRate: topTransactionTypeBucket
             ? calculateFailedTransactionRate(topTransactionTypeBucket)
             : undefined,
@@ -196,7 +202,7 @@ export async function getServiceTransactionStats({
             ? calculateThroughputWithRange({
                 start,
                 end,
-                value: topTransactionTypeBucket?.doc_count,
+                value: topTransactionTypeBucket.doc_count,
               })
             : undefined,
         };

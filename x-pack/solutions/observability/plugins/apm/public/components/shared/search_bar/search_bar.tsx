@@ -15,6 +15,25 @@ import { TransactionTypeSelect } from '../transaction_type_select';
 import { UnifiedSearchBar } from '../unified_search_bar';
 import { useSecondaryFiltersWidthStyle } from './use_secondary_filters_width_style';
 import { AnomalyThresholdSelect } from '../anomaly_threshold_select';
+import { useApmServiceContext } from '../../../context/apm_service/use_apm_service_context';
+
+// Renders the transaction type selector inside its own grid cell. Returns null
+// when there are no typed transaction types so the grid cell itself disappears.
+function TransactionTypeFlexItem({
+  compressed,
+  fullWidth,
+}: {
+  compressed?: boolean;
+  fullWidth?: boolean;
+}) {
+  const { transactionTypes } = useApmServiceContext();
+  if (!transactionTypes.length) return null;
+  return (
+    <EuiFlexItem>
+      <TransactionTypeSelect compressed={compressed} fullWidth={fullWidth} />
+    </EuiFlexItem>
+  );
+}
 
 interface Props {
   hidden?: boolean;
@@ -82,9 +101,7 @@ export function SearchBar({
               `}
             >
               {showTransactionTypeSelector && (
-                <EuiFlexItem>
-                  <TransactionTypeSelect compressed fullWidth />
-                </EuiFlexItem>
+                <TransactionTypeFlexItem compressed fullWidth />
               )}
 
               {showEnvironmentFilter && (

@@ -39,6 +39,10 @@ async function hasDataRequest(apmEventClient: APMEventClient, dataTiers?: DataTi
     query,
   };
 
-  const resp = await apmEventClient.search('has_historical_agent_data', params);
+  // skipProcessorEventFilter: any document in APM indices counts as "has data",
+  // including unprocessed OTel data that has no processor.event field.
+  const resp = await apmEventClient.search('has_historical_agent_data', params, {
+    skipProcessorEventFilter: true,
+  });
   return resp.hits.total.value > 0;
 }

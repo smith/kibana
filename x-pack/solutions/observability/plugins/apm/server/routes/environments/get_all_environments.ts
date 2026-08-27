@@ -7,6 +7,8 @@
 
 import { termQuery } from '@kbn/observability-plugin/server';
 import { ProcessorEvent } from '@kbn/observability-plugin/common';
+import { uniq } from 'lodash';
+import { DEPLOYMENT_ENVIRONMENT, DEPLOYMENT_ENVIRONMENT_NAME } from '@kbn/apm-types/es_fields';
 import { SERVICE_NAME, SERVICE_ENVIRONMENT } from '../../../common/es_fields/apm';
 import { ENVIRONMENT_NOT_DEFINED } from '../../../common/environment_filter_values';
 import { getProcessorEventForTransactions } from '../../lib/helpers/transactions';
@@ -60,12 +62,21 @@ export async function getAllEnvironments({
           missing: includeMissing ? ENVIRONMENT_NOT_DEFINED.value : undefined,
         },
       },
+      otel_environments: {
+        terms: { field: DEPLOYMENT_ENVIRONMENT_NAME, size },
+      },
+      otel_environments_legacy: {
+        terms: { field: DEPLOYMENT_ENVIRONMENT, size },
+      },
     },
   };
 
   const resp = await apmEventClient.search(operationName, params);
 
-  const environments =
-    resp.aggregations?.environments.buckets.map((bucket) => bucket.key as string) || [];
+  const environments = uniq([
+    ...(resp.aggregations?.environments.buckets.map((b) => b.key as string) ?? []),
+    ...(resp.aggregations?.otel_environments.buckets.map((b) => b.key as string) ?? []),
+    ...(resp.aggregations?.otel_environments_legacy.buckets.map((b) => b.key as string) ?? []),
+  ]);
   return environments;
 }

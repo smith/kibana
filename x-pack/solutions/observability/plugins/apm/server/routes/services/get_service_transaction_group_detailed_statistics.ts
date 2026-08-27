@@ -17,7 +17,30 @@ import type {
   ServiceTransactionGroupDetailedStat,
 } from '@kbn/apm-api-shared';
 import type { ApmTransactionDocumentType } from '../../../common/document_type';
-import { SERVICE_NAME, TRANSACTION_NAME, TRANSACTION_TYPE } from '../../../common/es_fields/apm';
+import {
+  KIND,
+  PROCESSOR_EVENT,
+  SERVICE_NAME,
+  SPAN_NAME,
+  TRANSACTION_NAME,
+  TRANSACTION_TYPE,
+} from '../../../common/es_fields/apm';
+
+const EFFECTIVE_NAME_FIELD = 'effective_name';
+const effectiveNameRuntimeMapping = {
+  [EFFECTIVE_NAME_FIELD]: {
+    type: 'keyword' as const,
+    script: {
+      source: `
+        if (doc.containsKey('${TRANSACTION_NAME}') && doc['${TRANSACTION_NAME}'].size() > 0) {
+          emit(doc['${TRANSACTION_NAME}'].value);
+        } else if (doc.containsKey('${SPAN_NAME}') && doc['${SPAN_NAME}'].size() > 0) {
+          emit(doc['${SPAN_NAME}'].value);
+        }
+      `,
+    },
+  },
+};
 import type { LatencyAggregationType } from '../../../common/latency_aggregation_types';
 import { nullifyEmptyRedMetricPoints } from '../../../common/utils/red_metric_value_for_histogram_bucket';
 import { environmentQuery } from '../../../common/utils/environment_query';
@@ -76,11 +99,25 @@ async function getServiceTransactionGroupDetailedStatistics({
       },
       track_total_hits: false,
       size: 0,
+      runtime_mappings: effectiveNameRuntimeMapping,
       query: {
         bool: {
           filter: [
             { term: { [SERVICE_NAME]: serviceName } },
-            { term: { [TRANSACTION_TYPE]: transactionType } },
+            {
+              bool: {
+                should: [
+                  { term: { [TRANSACTION_TYPE]: transactionType } },
+                  {
+                    bool: {
+                      must: [{ terms: { [KIND]: ['Server', 'Consumer'] } }],
+                      must_not: [{ exists: { field: PROCESSOR_EVENT } }],
+                    },
+                  },
+                ],
+                minimum_should_match: 1,
+              },
+            },
             ...rangeQuery(startWithOffset, endWithOffset),
             ...environmentQuery(environment),
             ...kqlQuery(kuery),
@@ -91,7 +128,7 @@ async function getServiceTransactionGroupDetailedStatistics({
         total_duration: { sum: { field } },
         transaction_groups: {
           terms: {
-            field: TRANSACTION_NAME,
+            field: EFFECTIVE_NAME_FIELD,
             include: transactionNames,
             size: transactionNames.length,
           },

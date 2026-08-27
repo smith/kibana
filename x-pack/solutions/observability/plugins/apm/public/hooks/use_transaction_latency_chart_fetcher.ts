@@ -28,7 +28,8 @@ export function useTransactionLatencyChartsFetcher({
   transactionName: string | null;
   latencyAggregationType: LatencyAggregationType;
 }) {
-  const { transactionType, serviceName, transactionTypeStatus } = useApmServiceContext();
+  const { transactionType, serviceName, transactionTypeStatus, hasUntypedTransactions } =
+    useApmServiceContext();
 
   const {
     query: { rangeFrom, rangeTo, offset, comparisonEnabled },
@@ -50,11 +51,11 @@ export function useTransactionLatencyChartsFetcher({
 
   const { data, error, status } = useFetcher(
     (callApmApi) => {
-      if (!transactionType && transactionTypeStatus === FETCH_STATUS.SUCCESS) {
+      if (!transactionType && !hasUntypedTransactions && transactionTypeStatus === FETCH_STATUS.SUCCESS) {
         return Promise.resolve(undefined);
       }
 
-      if (serviceName && start && end && transactionType && latencyAggregationType && preferred) {
+      if (serviceName && start && end && (transactionType || hasUntypedTransactions) && latencyAggregationType && preferred) {
         return callApmApi('GET /internal/apm/services/{serviceName}/transactions/charts/latency', {
           params: {
             path: { serviceName },
@@ -78,6 +79,7 @@ export function useTransactionLatencyChartsFetcher({
     },
     [
       transactionType,
+      hasUntypedTransactions,
       transactionTypeStatus,
       serviceName,
       start,

@@ -8,9 +8,12 @@ import type { BoolQuery } from '@kbn/es-query';
 import { kqlQuery, rangeQuery, termQuery } from '@kbn/observability-plugin/server';
 import { getDurationFieldForTransactions } from '@kbn/apm-data-access-plugin/server/utils';
 import type { TransactionLatencyResponse } from '@kbn/apm-api-shared';
+import { DURATION } from '@kbn/apm-types/es_fields';
 import type { ApmServiceTransactionDocumentType } from '../../../../common/document_type';
 import {
   FAAS_ID,
+  KIND,
+  PROCESSOR_EVENT,
   SERVICE_NAME,
   TRANSACTION_NAME,
   TRANSACTION_TYPE,
@@ -73,6 +76,28 @@ function searchLatency({
     useDurationSummary
   );
 
+  // When a transactionType is specified, match either APM docs by transaction.type
+  // or OTel entry spans (Server/Consumer kind, no processor.event) that lack
+  // transaction.type entirely.
+  const transactionTypeFilter = transactionType
+    ? [
+        {
+          bool: {
+            should: [
+              { term: { [TRANSACTION_TYPE]: transactionType } },
+              {
+                bool: {
+                  must: [{ terms: { [KIND]: ['Server', 'Consumer'] } }],
+                  must_not: [{ exists: { field: PROCESSOR_EVENT } }],
+                },
+              },
+            ],
+            minimum_should_match: 1 as const,
+          },
+        },
+      ]
+    : [];
+
   const params = {
     apm: {
       sources: [{ documentType, rollupInterval }],
@@ -87,7 +112,7 @@ function searchLatency({
           ...environmentQuery(environment),
           ...kqlQuery(kuery),
           ...termQuery(TRANSACTION_NAME, transactionName),
-          ...termQuery(TRANSACTION_TYPE, transactionType),
+          ...transactionTypeFilter,
           ...termQuery(FAAS_ID, serverlessId),
           ...(filters?.filter || []),
         ],
@@ -102,9 +127,15 @@ function searchLatency({
           min_doc_count: 0,
           extended_bounds: { min: startWithOffset, max: endWithOffset },
         },
-        aggs: getLatencyAggregation(latencyAggregationType, transactionDurationField),
+        aggs: {
+          ...getLatencyAggregation(latencyAggregationType, transactionDurationField),
+          // OTel spans store duration in nanoseconds in `duration`. Used as fallback
+          // when transaction.duration.us is absent.
+          otel_latency: { avg: { field: DURATION } },
+        },
       },
       overall_avg_duration: { avg: { field: transactionDurationField } },
+      overall_avg_otel_duration: { avg: { field: DURATION } },
     },
   };
 
@@ -169,18 +200,27 @@ export async function getLatencyTimeseries({
     return { latencyTimeseries: [], overallAvgDuration: null };
   }
 
+  const overallAvgDuration =
+    response.aggregations.overall_avg_duration.value ||
+    (response.aggregations.overall_avg_otel_duration.value != null
+      ? response.aggregations.overall_avg_otel_duration.value / 1000
+      : null);
+
   return {
-    overallAvgDuration: response.aggregations.overall_avg_duration.value || null,
+    overallAvgDuration,
     latencyTimeseries: nullifyEmptyRedMetricPoints(
       response.aggregations.latencyTimeseries.buckets.map((bucket) => {
-        const y = getLatencyValue({
+        const apmY = getLatencyValue({
           latencyAggregationType,
           aggregation: bucket.latency,
         });
+        // Fall back to OTel duration (ns→µs) when the APM field is absent.
+        const otelY =
+          bucket.otel_latency?.value != null ? bucket.otel_latency.value / 1000 : null;
         return {
           x: bucket.key,
           docCount: bucket.doc_count,
-          y,
+          y: apmY ?? otelY,
         };
       })
     ),

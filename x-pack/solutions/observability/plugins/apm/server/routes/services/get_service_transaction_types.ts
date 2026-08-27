@@ -47,6 +47,16 @@ export async function getServiceTransactionTypes({
       types: {
         terms: { field: TRANSACTION_TYPE, size: 100 },
       },
+      // Detect spans/transactions that have no transaction.type field.
+      // Unprocessed OTel data never has transaction.type; some enriched APM docs
+      // also lack it. These are surfaced as an "untyped" option in the UI.
+      untyped_transactions: {
+        filter: {
+          bool: {
+            must_not: [{ exists: { field: TRANSACTION_TYPE } }],
+          },
+        },
+      },
     },
   };
 
@@ -57,5 +67,8 @@ export async function getServiceTransactionTypes({
       // we exclude page-exit transactions because they are not relevant for the apm app
       // and are only used for the INP values
       .filter((value) => value !== 'page-exit') || [];
-  return { transactionTypes };
+
+  const hasUntypedTransactions = (aggregations?.untyped_transactions.doc_count ?? 0) > 0;
+
+  return { transactionTypes, hasUntypedTransactions };
 }

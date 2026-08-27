@@ -33,8 +33,8 @@ export const transactionChartsErrorRateRoute = defineRoute<FailedTransactionRate
     z.object({
       path: z.object({ serviceName: z.string() }),
       query: z
-        .object({ transactionType: z.string(), bucketSizeInSeconds: z.coerce.number() })
-        .merge(z.object({ transactionName: z.string(), filters: filtersSchema }).partial())
+        .object({ bucketSizeInSeconds: z.coerce.number() })
+        .merge(z.object({ transactionType: z.string(), transactionName: z.string(), filters: filtersSchema }).partial())
         .merge(environmentSchema)
         .merge(kuerySchema)
         .merge(rangeSchema)

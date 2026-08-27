@@ -101,17 +101,18 @@ export function FailedTransactionRateChart({
     AnomalyDetectorType.txFailureRate
   );
 
-  const { serviceName, transactionType, transactionTypeStatus } = useApmServiceContext();
+  const { serviceName, transactionType, transactionTypeStatus, hasUntypedTransactions } =
+    useApmServiceContext();
 
   const comparisonChartTheme = getComparisonChartTheme();
 
   const { data = INITIAL_STATE, status } = useFetcher(
     (callApmApi) => {
-      if (!transactionType && transactionTypeStatus === FETCH_STATUS.SUCCESS) {
+      if (!transactionType && !hasUntypedTransactions && transactionTypeStatus === FETCH_STATUS.SUCCESS) {
         return Promise.resolve(INITIAL_STATE);
       }
 
-      if (transactionType && serviceName && start && end && preferred) {
+      if ((transactionType || hasUntypedTransactions) && serviceName && start && end && preferred) {
         return callApmApi(
           'GET /internal/apm/services/{serviceName}/transactions/charts/error_rate',
           {
@@ -143,6 +144,7 @@ export function FailedTransactionRateChart({
       start,
       end,
       transactionType,
+      hasUntypedTransactions,
       transactionTypeStatus,
       transactionName,
       offset,

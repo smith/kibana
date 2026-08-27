@@ -23,12 +23,9 @@ const EuiSelectWithWidth = styled(EuiSelect)`
   min-width: 200px;
 `;
 
-const NO_SELECTION_OPTION = i18n.translate(
-  'xpack.apm.transactionTypeSelect.noTransactionTypeAvailable',
-  {
-    defaultMessage: 'No transaction type available',
-  }
-);
+// Sentinel URL value meaning "no transaction type filter". Distinct from
+// undefined (which means "not yet chosen, auto-select the default").
+export const TRANSACTION_TYPE_NONE = '__none__';
 
 export function TransactionTypeSelect({
   compressed,
@@ -42,21 +39,42 @@ export function TransactionTypeSelect({
   cssOverride?: CSSObject;
 }) {
   const { isSmall } = useBreakpoints();
-  const { transactionTypes, transactionType } = useApmServiceContext();
+  const { transactionTypes, hasUntypedTransactions, transactionType } = useApmServiceContext();
   const history = useHistory();
 
   const handleChange = useCallback(
     (event: FormEvent<HTMLSelectElement>) => {
-      const selectedTransactionType = event.currentTarget.value;
       urlHelpers.push(history, {
-        query: { transactionType: selectedTransactionType },
+        query: { transactionType: event.currentTarget.value },
       });
     },
     [history]
   );
 
-  const options = transactionTypes.map((t) => ({ text: t, value: t }));
-  const isDisabled = options.length === 0;
+  // Only show the switcher when there are typed transaction types to choose between.
+  // Pure OTel services (untyped spans only) have nothing to switch.
+  if (transactionTypes.length === 0) {
+    return null;
+  }
+
+  const typedOptions = transactionTypes.map((t) => ({ text: t, value: t }));
+
+  // When there's a mix of typed and untyped spans, offer "None" as a choice.
+  const options = [
+    ...typedOptions,
+    ...(hasUntypedTransactions
+      ? [
+          {
+            text: i18n.translate('xpack.apm.transactionTypeSelect.none', {
+              defaultMessage: 'None',
+            }),
+            value: TRANSACTION_TYPE_NONE,
+          },
+        ]
+      : []),
+  ];
+
+  const currentValue = transactionType ?? TRANSACTION_TYPE_NONE;
 
   return (
     <EuiSelectWithWidth
@@ -74,11 +92,10 @@ export function TransactionTypeSelect({
         'xpack.apm.serviceOverview.filterByTransactionTypeSelect.ariaLabel',
         { defaultMessage: 'Filter by transaction type select' }
       )}
-      data-test-subj={`headerFilterTransactionType${isDisabled ? 'Disabled' : ''}`}
-      disabled={isDisabled}
+      data-test-subj="headerFilterTransactionType"
       onChange={handleChange}
-      options={isDisabled ? [{ text: NO_SELECTION_OPTION, value: '' }] : options}
-      value={isDisabled ? '' : transactionType ?? options[0]?.value ?? ''}
+      options={options}
+      value={currentValue}
     />
   );
 }

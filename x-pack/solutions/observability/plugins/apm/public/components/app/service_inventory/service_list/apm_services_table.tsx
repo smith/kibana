@@ -54,6 +54,7 @@ import type {
 import { ManagedTable } from '../../../shared/managed_table';
 import { AnomaliesBadge } from './anomalies_badge';
 import { SloStatusBadge } from '../../../shared/slo_status_badge';
+import { DEPLOYMENT_ENVIRONMENT_NAME } from '@kbn/apm-types';
 import { getESQLQuery, type IndexType } from '../../../shared/links/discover_links/get_esql_query';
 import { useServiceActions } from './service_actions';
 import {
@@ -566,6 +567,9 @@ export function ApmServicesTable({
           serviceName: item.serviceName,
           transactionType: indexType === 'traces' ? item.transactionType : undefined,
           environment,
+          // OTel-only services have no transactionType (the APM field is absent).
+          // Their environment is stored in deployment.environment.name, not service.environment.
+          environmentField: item.transactionType === undefined ? DEPLOYMENT_ENVIRONMENT_NAME : undefined,
           sortDirection: 'DESC',
         },
         indexSettings,

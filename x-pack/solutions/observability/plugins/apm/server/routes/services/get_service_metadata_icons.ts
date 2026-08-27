@@ -41,6 +41,8 @@ export const should = [
   { exists: { field: AGENT_VERSION } },
   { exists: { field: SERVICE_FRAMEWORK_NAME } },
   { exists: { field: LABEL_TELEMETRY_AUTO_VERSION } },
+  { exists: { field: TELEMETRY_SDK_NAME } },
+  { exists: { field: TELEMETRY_SDK_LANGUAGE } },
 ];
 
 export async function getServiceMetadataIcons({

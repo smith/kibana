@@ -8,8 +8,15 @@
 import { kqlQuery, rangeQuery, termsQuery } from '@kbn/observability-plugin/server';
 import { ApmDocumentType, RollupInterval } from '@kbn/apm-data-access-plugin/common';
 import { ProcessorEvent } from '@kbn/observability-plugin/common';
+import { getAgentName } from '@kbn/elastic-agent-utils';
 import type { ServicesResponse } from '../../../common/service_map/types';
-import { AGENT_NAME, SERVICE_ENVIRONMENT, SERVICE_NAME } from '../../../common/es_fields/apm';
+import {
+  AGENT_NAME,
+  SERVICE_ENVIRONMENT,
+  SERVICE_NAME,
+  TELEMETRY_SDK_LANGUAGE,
+  TELEMETRY_SDK_NAME,
+} from '../../../common/es_fields/apm';
 import { environmentQuery } from '../../../common/utils/environment_query';
 import { ENVIRONMENT_ALL } from '../../../common/environment_filter_values';
 import { getProcessorEventForTransactions } from '../../lib/helpers/transactions';
@@ -57,9 +64,13 @@ export async function getServiceStats({
         },
         aggs: {
           agent_name: {
-            terms: {
-              field: AGENT_NAME,
-            },
+            terms: { field: AGENT_NAME },
+          },
+          telemetry_sdk_language: {
+            terms: { field: TELEMETRY_SDK_LANGUAGE },
+          },
+          telemetry_sdk_name: {
+            terms: { field: TELEMETRY_SDK_NAME },
           },
         },
       },
@@ -109,7 +120,11 @@ export async function getServiceStats({
 
   return buckets.map((bucket) => ({
     [SERVICE_NAME]: bucket.key as string,
-    [AGENT_NAME]: (bucket.agent_name.buckets[0]?.key as string | undefined) || '',
+    [AGENT_NAME]: getAgentName(
+      (bucket.agent_name.buckets[0]?.key as string | null) ?? null,
+      (bucket.telemetry_sdk_language.buckets[0]?.key as string | null) ?? null,
+      (bucket.telemetry_sdk_name.buckets[0]?.key as string | null) ?? null
+    ) ?? '',
     [SERVICE_ENVIRONMENT]: environment === ENVIRONMENT_ALL.value ? null : environment,
   }));
 }

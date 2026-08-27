@@ -30,6 +30,19 @@ import type {
 
 const ElasticAgentNamesSet = new Set(ELASTIC_AGENT_NAMES);
 
+// Normalizes non-standard telemetry.sdk.name values (e.g. "go.opentelemetry.io/otel/sdk/trace",
+// "opentelemetry-sdk") to the canonical "opentelemetry" or "otlp" prefix used in agent name lookups.
+function normalizeSdkName(sdkName: string): string {
+  const lower = sdkName.toLowerCase();
+  if (lower === 'otlp' || lower.startsWith('otlp/') || lower.startsWith('otlp-')) {
+    return 'otlp';
+  }
+  if (lower.includes('opentelemetry') || lower.includes('otel')) {
+    return 'opentelemetry';
+  }
+  return sdkName;
+}
+
 export function getAgentName(
   agentName: string | null,
   telemetryAgentName: string | null,
@@ -40,7 +53,7 @@ export function getAgentName(
   }
 
   if (telemetrySdkName && telemetryAgentName) {
-    return `${telemetrySdkName}/${telemetryAgentName}`;
+    return `${normalizeSdkName(telemetrySdkName)}/${telemetryAgentName}`;
   }
 
   return telemetryAgentName;

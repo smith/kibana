@@ -11,7 +11,7 @@ import type {
   QueryDslQueryContainer,
 } from '@elastic/elasticsearch/lib/api/types';
 import type { AggregationResultOfMap } from '@kbn/es-types';
-import { EVENT_OUTCOME, EVENT_SUCCESS_COUNT } from '@kbn/apm-types/es_fields';
+import { EVENT_OUTCOME, EVENT_SUCCESS_COUNT, STATUS_CODE } from '@kbn/apm-types/es_fields';
 import { ApmDocumentType } from '../../../common/document_type';
 
 enum EventOutcome {
@@ -19,6 +19,10 @@ enum EventOutcome {
   failure = 'failure',
   unknown = 'unknown',
 }
+
+// OTel span status.code is stored as a string in Elasticsearch ("Ok", "Error", "Unset")
+const OTEL_STATUS_OK = 'Ok';
+const OTEL_STATUS_ERROR = 'Error';
 
 export const getOutcomeAggregation = (
   documentType: ApmDocumentType
@@ -43,30 +47,30 @@ export const getOutcomeAggregation = (
     };
   }
 
+  // For enriched APM docs, event.outcome is set by the APM server.
+  // For unprocessed OTel docs (no event.outcome), fall back to status.code
+  // which is stored as a string: "Ok" → success, "Error" → failure,
+  // "Unset" → excluded from denominator (same as event.outcome: unknown).
   return {
     successful_or_failed: {
       filter: {
         bool: {
-          filter: [
-            {
-              terms: {
-                [EVENT_OUTCOME]: [EventOutcome.failure, EventOutcome.success],
-              },
-            },
+          should: [
+            { terms: { [EVENT_OUTCOME]: [EventOutcome.failure, EventOutcome.success] } },
+            { terms: { [STATUS_CODE]: [OTEL_STATUS_OK, OTEL_STATUS_ERROR] } },
           ],
+          minimum_should_match: 1,
         },
       },
     },
     successful: {
       filter: {
         bool: {
-          filter: [
-            {
-              terms: {
-                [EVENT_OUTCOME]: [EventOutcome.success],
-              },
-            },
+          should: [
+            { terms: { [EVENT_OUTCOME]: [EventOutcome.success] } },
+            { term: { [STATUS_CODE]: OTEL_STATUS_OK } },
           ],
+          minimum_should_match: 1,
         },
       },
     },

@@ -70,17 +70,18 @@ export function ServiceOverviewThroughputChart({
       : ApmDocumentType.ServiceTransactionMetric,
   });
 
-  const { transactionType, serviceName, transactionTypeStatus } = useApmServiceContext();
+  const { transactionType, serviceName, transactionTypeStatus, hasUntypedTransactions } =
+    useApmServiceContext();
 
   const comparisonChartTheme = getComparisonChartTheme();
 
   const { data = INITIAL_STATE, status } = useFetcher(
     (callApmApi) => {
-      if (!transactionType && transactionTypeStatus === FETCH_STATUS.SUCCESS) {
+      if (!transactionType && !hasUntypedTransactions && transactionTypeStatus === FETCH_STATUS.SUCCESS) {
         return Promise.resolve(INITIAL_STATE);
       }
 
-      if (serviceName && transactionType && start && end && preferred) {
+      if (serviceName && (transactionType || hasUntypedTransactions) && start && end && preferred) {
         return callApmApi('GET /internal/apm/services/{serviceName}/throughput', {
           params: {
             path: {
@@ -109,6 +110,7 @@ export function ServiceOverviewThroughputChart({
       start,
       end,
       transactionType,
+      hasUntypedTransactions,
       transactionTypeStatus,
       offset,
       transactionName,

@@ -9,7 +9,7 @@ import { useFetcher } from '../../hooks/use_fetcher';
 import type { RollupInterval } from '../../../common/rollup';
 import type { ApmTransactionDocumentType } from '../../../common/document_type';
 
-const INITIAL_DATA = { transactionTypes: [] };
+const INITIAL_DATA = { transactionTypes: [], hasUntypedTransactions: false };
 
 export function useServiceTransactionTypesFetcher({
   serviceName,
@@ -38,5 +38,9 @@ export function useServiceTransactionTypesFetcher({
     [serviceName, start, end, documentType, rollupInterval]
   );
 
-  return { transactionTypes: data.transactionTypes, status };
+  return {
+    transactionTypes: data.transactionTypes,
+    hasUntypedTransactions: data.hasUntypedTransactions,
+    status,
+  };
 }

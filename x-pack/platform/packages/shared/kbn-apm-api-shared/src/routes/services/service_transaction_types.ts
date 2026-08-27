@@ -10,6 +10,8 @@ import { rangeSchema, serviceTransactionDataSourceSchema } from '../../default_a
 
 export interface ServiceTransactionTypesResponse {
   transactionTypes: string[];
+  /** True when there are spans/transactions without a transaction.type field (e.g. unprocessed OTel). */
+  hasUntypedTransactions: boolean;
 }
 
 export const serviceTransactionTypesRoute = defineRoute<ServiceTransactionTypesResponse>()({

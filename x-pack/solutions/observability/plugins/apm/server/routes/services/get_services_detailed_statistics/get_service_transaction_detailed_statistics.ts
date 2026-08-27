@@ -13,6 +13,7 @@ import {
   getDurationFieldForTransactions,
 } from '@kbn/apm-data-access-plugin/server/utils';
 import type { ServiceTransactionDetailedStatPeriodsResponse } from '@kbn/apm-api-shared';
+import { DURATION } from '@kbn/apm-types/es_fields';
 import { calculateThroughputWithInterval } from '../../../lib/helpers/calculate_throughput';
 import type { ApmServiceTransactionDocumentType } from '../../../../common/document_type';
 import { SERVICE_NAME, TRANSACTION_TYPE } from '../../../../common/es_fields/apm';
@@ -57,6 +58,9 @@ export async function getServiceTransactionDetailedStats({
     offset,
   });
 
+  // Synthetic bucket key for OTel spans that have no transaction.type field.
+  const OTEL_NO_TX_TYPE = '__otel__';
+
   const outcomes = getOutcomeAggregation(documentType);
 
   const metrics = {
@@ -65,19 +69,23 @@ export async function getServiceTransactionDetailedStats({
         field: getDurationFieldForTransactions(documentType),
       },
     },
+    // OTel spans store duration in nanoseconds in `duration`. Absent for APM docs.
+    avg_otel_duration: { avg: { field: DURATION } },
     ...outcomes,
   };
 
-  const response = await apmEventClient.search('get_service_transaction_detail_stats', {
-    apm: {
-      sources: [
-        {
-          documentType,
-          rollupInterval,
-        },
-      ],
-    },
-    track_total_hits: false,
+  const response = await apmEventClient.search(
+    'get_service_transaction_detail_stats',
+    {
+      apm: {
+        sources: [
+          {
+            documentType,
+            rollupInterval,
+          },
+        ],
+      },
+      track_total_hits: false,
     size: 0,
     query: {
       bool: {
@@ -102,6 +110,9 @@ export async function getServiceTransactionDetailedStats({
               transactionType: {
                 terms: {
                   field: TRANSACTION_TYPE,
+                  // Docs with no transaction.type (unprocessed OTel spans) land
+                  // in this synthetic bucket so their metrics are still computed.
+                  missing: OTEL_NO_TX_TYPE,
                 },
                 aggs: {
                   ...metrics,
@@ -139,7 +150,12 @@ export async function getServiceTransactionDetailedStats({
           topTransactionTypeBucket?.timeseries.buckets.map((dateBucket) => ({
             x: dateBucket.key + offsetInMs,
             docCount: dateBucket.doc_count,
-            y: dateBucket.avg_duration.value,
+            // OTel spans have no transaction.duration.us; fall back to duration (ns→µs)
+            y:
+              dateBucket.avg_duration.value ??
+              (dateBucket.avg_otel_duration?.value != null
+                ? dateBucket.avg_otel_duration.value / 1000
+                : null),
           })) ?? []
         ),
         transactionErrorRate: topTransactionTypeBucket

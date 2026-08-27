@@ -9,6 +9,7 @@ import type { ApmIndexSettingsResponse } from '@kbn/apm-sources-access-plugin/se
 import { esql } from '@elastic/esql';
 import {
   AT_TIMESTAMP,
+  DEPLOYMENT_ENVIRONMENT_NAME,
   ERROR_GROUP_ID,
   ERROR_ID,
   SERVICE_ENVIRONMENT,
@@ -38,6 +39,9 @@ export interface ESQLQueryParams {
   kuery?: string;
   serviceName?: string;
   environment?: string;
+  /** Field name to filter on for environment. Defaults to service.environment (APM).
+   *  Pass deployment.environment.name for OTel services. */
+  environmentField?: string;
   transactionName?: string;
   transactionType?: string;
   sampleRangeFrom?: number;
@@ -74,6 +78,7 @@ export const getESQLQuery = ({
     kuery,
     serviceName,
     environment,
+    environmentField = SERVICE_ENVIRONMENT,
     transactionName,
     transactionType,
     sampleRangeFrom,
@@ -116,7 +121,7 @@ export const getESQLQuery = ({
     environment !== ENVIRONMENT_ALL_VALUE &&
     environment !== ENVIRONMENT_NOT_DEFINED_VALUE
   ) {
-    query = query.where`${esql.col(SERVICE_ENVIRONMENT)} == ${environment}`;
+    query = query.where`${esql.col(environmentField)} == ${environment}`;
   }
 
   if (dependencyName) {

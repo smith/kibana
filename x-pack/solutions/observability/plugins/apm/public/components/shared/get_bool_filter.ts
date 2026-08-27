@@ -47,10 +47,19 @@ export function getBoolFilter({
     });
   }
 
+  // For each event type, we match either the enriched APM documents (which
+  // have processor.event) or unprocessed OTel spans/logs (which do not).
   switch (processorEvent) {
     case 'transaction':
       boolFilter.push({
-        term: { [PROCESSOR_EVENT]: 'transaction' },
+        bool: {
+          should: [
+            { term: { [PROCESSOR_EVENT]: 'transaction' } },
+            // Unprocessed OTel spans have no processor.event
+            { bool: { must_not: { exists: { field: PROCESSOR_EVENT } } } },
+          ],
+          minimum_should_match: 1,
+        },
       });
 
       if (urlParams.transactionName) {
@@ -68,7 +77,14 @@ export function getBoolFilter({
 
     case 'error':
       boolFilter.push({
-        term: { [PROCESSOR_EVENT]: 'error' },
+        bool: {
+          should: [
+            { term: { [PROCESSOR_EVENT]: 'error' } },
+            // Unprocessed OTel errors have no processor.event
+            { bool: { must_not: { exists: { field: PROCESSOR_EVENT } } } },
+          ],
+          minimum_should_match: 1,
+        },
       });
 
       if (groupId) {
@@ -91,6 +107,8 @@ export function getBoolFilter({
             { term: { [PROCESSOR_EVENT]: 'error' } },
             { term: { [PROCESSOR_EVENT]: 'transaction' } },
             { term: { [PROCESSOR_EVENT]: 'metric' } },
+            // Unprocessed OTel data has no processor.event
+            { bool: { must_not: { exists: { field: PROCESSOR_EVENT } } } },
           ],
         },
       });

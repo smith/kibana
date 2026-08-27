@@ -6,6 +6,10 @@
  */
 
 export const STATUS_CODE = 'status.code';
+// OTel resource attribute for deployment environment (semconv 1.24+)
+export const DEPLOYMENT_ENVIRONMENT_NAME = 'deployment.environment.name';
+// Deprecated predecessor — kept for backwards compatibility with older SDKs
+export const DEPLOYMENT_ENVIRONMENT = 'deployment.environment';
 export const OTEL_EVENT_NAME = 'event_name';
 export const EXCEPTION_TYPE = 'exception.type';
 export const EXCEPTION_MESSAGE = 'exception.message';

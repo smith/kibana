@@ -30,7 +30,7 @@ export async function getFailedTransactionRatePeriods({
   kuery: string;
   filters?: BoolQuery;
   serviceName: string;
-  transactionType: string;
+  transactionType?: string;
   transactionName?: string;
   apmEventClient: APMEventClient;
   start: number;
@@ -45,7 +45,7 @@ export async function getFailedTransactionRatePeriods({
     kuery,
     filters,
     serviceName,
-    transactionTypes: [transactionType],
+    transactionTypes: transactionType ? [transactionType] : [],
     transactionName,
     apmEventClient,
     documentType,

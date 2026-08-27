@@ -59,7 +59,7 @@ export async function getFailedTransactionRate({
 
   const filter = [
     { term: { [SERVICE_NAME]: serviceName } },
-    { terms: { [TRANSACTION_TYPE]: transactionTypes } },
+    ...(transactionTypes.length > 0 ? [{ terms: { [TRANSACTION_TYPE]: transactionTypes } }] : []),
     ...termQuery(TRANSACTION_NAME, transactionName),
     ...rangeQuery(startWithOffset, endWithOffset),
     ...environmentQuery(environment),
