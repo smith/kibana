@@ -546,7 +546,13 @@ apiTest.describe(
             responseType: 'json',
           });
           expect(getResponse).toHaveStatusCode(200);
-          const { name, tags, schedule, params, actions } = getResponse.body as {
+          const {
+            name,
+            tags: ruleTags,
+            schedule,
+            params,
+            actions,
+          } = getResponse.body as {
             name: string;
             tags: string[];
             schedule: { interval: string };
@@ -559,7 +565,7 @@ apiTest.describe(
             responseType: 'json',
             body: {
               name,
-              tags,
+              tags: ruleTags,
               schedule,
               params,
               actions: [
